@@ -2,6 +2,9 @@
 
 A VS Code extension that helps you maintain context across coding sessions by automatically generating resumes of your recent work and saving session context.
 
+[![Watch the demo](https://img.youtube.com/vi/<VIDEO_ID>/0.jpg)](https://www.loom.com/share/dc55b99b606a4eb896e79c6239e74e4f)
+
+
 ## Features
 
 - Session Timer: Track your coding sessions
