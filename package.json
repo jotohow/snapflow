@@ -1,11 +1,12 @@
 {
-  "name": "snapflow-ui",
+  "name": "snapflow",
   "displayName": "snapflow",
   "description": "A VS Code extension that helps you maintain context across coding sessions by automatically generating resumes of your recent work and saving session context.",
   "version": "0.0.1",
+  "publisher": "jotohow",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jotohow/snapflow-ui.git"
+    "url": "https://github.com/jotohow/snapflow.git"
   },
   "engines": {
     "vscode": "^1.85.0"
