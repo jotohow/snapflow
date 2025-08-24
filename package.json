@@ -1,0 +1,99 @@
+{
+  "name": "snapflow-ui",
+  "displayName": "snapflow",
+  "description": "A VS Code extension that helps you maintain context across coding sessions by automatically generating resumes of your recent work and saving session context.",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jotohow/snapflow-ui.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "snapflow",
+          "title": "SnapFlow",
+          "icon": "resources/snapflow.svg"
+        }
+      ]
+    },
+    "views": {
+      "snapflow": [
+        {
+          "type": "webview",
+          "id": "snapflow.webview",
+          "name": "AI Response",
+          "when": "true"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "snapflow.setup",
+        "title": "SnapFlow: Setup API Key",
+        "category": "SnapFlow"
+      },
+      {
+        "command": "snapflow.status",
+        "title": "SnapFlow: Check Status",
+        "category": "SnapFlow"
+      },
+      {
+        "command": "snapflow.test-webview",
+        "title": "SnapFlow: Test Webview",
+        "category": "SnapFlow"
+      },
+      {
+        "command": "snapflow.test-get-response",
+        "title": "SnapFlow: Test Get Current Response",
+        "category": "SnapFlow"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.39",
+    "dotenv": "^17.2.1",
+    "minimatch": "^10.0.3",
+    "openai": "^5.12.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "autoprefixer": "^10.4.0",
+    "css-loader": "^6.8.1",
+    "eslint": "^9.25.1",
+    "postcss": "^8.4.0",
+    "postcss-loader": "^7.3.0",
+    "prettier": "^3.6.2",
+    "style-loader": "^3.3.3",
+    "tailwindcss": "^3.3.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack": "^5.101.1",
+    "webpack-cli": "^6.0.1"
+  }
+}
