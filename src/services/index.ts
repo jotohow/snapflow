@@ -10,6 +10,7 @@ export { ConfigService, type ConfigValidationResult } from './ConfigService';
 export {
   AIProvider,
   OpenAIProvider,
+  anthropicProvider,
   MockAIProvider,
   type AIResponse,
 } from './AIProvider';

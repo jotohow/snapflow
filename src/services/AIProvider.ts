@@ -154,3 +154,95 @@ Context: [mock branch and commit info]`;
     return ['mock-model'];
   }
 }
+
+export class anthropicProvider implements AIProvider {
+  // TODO: This needs to have the API key loaded into environment - need to make that dependent on a config file somehow
+  private client: Anthropic;
+
+  constructor() {
+    this.client = new Anthropic();
+  }
+
+  async generateResume(
+    prompt: string,
+    model: string = 'claude-3-7-sonnet-latest'
+  ): Promise<string> {
+    try {
+      const response = await this.sendToModel(model, prompt);
+      const outputs = this.parseResponse(response);
+      // return outputs[0];
+      return this.extractFinalResume(outputs);
+    } catch (error) {
+      console.error('❌ AI generation failed:', error);
+      throw new Error(`AI generation failed: ${(error as Error).message}`);
+    }
+  }
+
+  getAvailableModels(): string[] {
+    return ['claude-3-7-sonnet-latest', 'claude-sonnet-4-20250514'];
+  }
+
+  async sendToModel(model: string, input: string): Promise<Anthropic.Message> {
+    try {
+      const response = await this.client.messages.create({
+        model: model,
+        messages: [
+          {
+            role: 'user',
+            content: input,
+          },
+        ],
+        max_tokens: 1024,
+      });
+      return response;
+    } catch (error) {
+      console.error('❌ Anthropic API call failed:', error);
+      throw error;
+    }
+  }
+
+  parseResponse(response: Anthropic.Message) {
+    // console.log(response);
+    try {
+      const contentBlock = response.content[0];
+      if (contentBlock.type !== 'text') {
+        console.error('❌ Unexpected content block type:', contentBlock.type);
+        throw new Error('Unexpected content block type in response');
+      }
+      const content = contentBlock.text;
+      if (!content) {
+        console.error('❌ No content in response');
+        throw new Error('No content in response from AI model');
+      }
+      return [content];
+    } catch (error) {
+      console.error('❌ Error parsing AI response:', error);
+      throw new Error(
+        `Failed to parse AI response: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Extract the final resume from AI output
+   */
+  private extractFinalResume(outputs: string[]): string {
+    if (!outputs || outputs.length === 0) {
+      throw new Error('No output received from AI model');
+    }
+
+    try {
+      // Try to parse as JSON first
+      const obj = JSON.parse(outputs[0]);
+      if (obj.final_resume) {
+        return obj.final_resume;
+      }
+      // If no final_resume field, return the first output as-is
+      return outputs[0];
+    } catch (error) {
+      // If parsing fails, treat as plain string
+      console.log('AI response is not JSON, treating as plain text');
+      return outputs[0];
+    }
+  }
+}

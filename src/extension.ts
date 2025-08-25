@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { newPromptForResume, enhancedPromptForResume } from './snapflow/resume';
+import { enhancedPromptForResume } from './snapflow/resume';
 import { saveSession } from './snapflow/save';
 import {
   TimerService,
@@ -24,9 +24,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize configuration service and set up workspace
   configService = new ConfigService(workspacePath);
 
+  let model: string | undefined;
+  let provider: string | undefined;
   try {
     await configService.ensureWorkspaceSetup();
     const apiKey = configService.loadApiKey();
+    model = configService._config?.model;
+    provider = configService._config?.provider;
   } catch (error) {
     console.error('❌ Failed to initialize workspace configuration:', error);
   }
@@ -73,7 +77,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let command = 'snapflow-ui.start-stop';
   context.subscriptions.push(
     vscode.commands.registerCommand(command, async () => {
-      toggleStopwatch(workspacePath);
+      toggleStopwatch(workspacePath, provider, model);
     })
   );
 
@@ -140,15 +144,23 @@ export async function activate(context: vscode.ExtensionContext) {
   updateStatusBarItem();
 }
 
-function toggleStopwatch(cwd: string) {
+function toggleStopwatch(
+  cwd: string,
+  provider: string | undefined,
+  model: string | undefined
+) {
   if (timerService.isActive()) {
     stopStopwatch(cwd);
   } else {
-    startStopwatch(cwd);
+    startStopwatch(cwd, provider, model);
   }
 }
 
-async function startStopwatch(cwd: string) {
+async function startStopwatch(
+  cwd: string,
+  provider: string | undefined,
+  model: string | undefined
+) {
   if (timerService.isActive()) {
     // Timer is already running, stop it
     await stopStopwatch(cwd);
@@ -158,11 +170,9 @@ async function startStopwatch(cwd: string) {
   // Start the timer
   timerService.start();
 
-  // Change tracking is always active (no session management needed)
-
   // Get resume and populate output panel
   try {
-    const summary = await enhancedPromptForResume(cwd);
+    const summary = await enhancedPromptForResume(cwd, provider, model);
 
     // Keep existing output channel functionality
     outputChannel.appendLine('');
