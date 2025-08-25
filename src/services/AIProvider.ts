@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
 export interface AIResponse {
   content: string;
@@ -56,17 +57,24 @@ export class OpenAIProvider implements AIProvider {
     ];
   }
 
+  // TODO: Should be using the chat API
   /**
    * Send prompt to the AI model
    */
   private async sendToModel(
     model: string,
     input: string
-  ): Promise<OpenAI.Responses.Response> {
+  ): Promise<OpenAI.Chat.ChatCompletion> {
     try {
-      const response = await this.openai.responses.create({
+      const response = await this.openai.chat.completions.create({
         model: model,
-        input: input,
+        messages: [
+          {
+            role: 'user',
+            content: input,
+          },
+        ],
+        max_tokens: 1024,
       });
       return response;
     } catch (error) {
@@ -78,17 +86,14 @@ export class OpenAIProvider implements AIProvider {
   /**
    * Parse the AI model response
    */
-  private parseResponse(response: OpenAI.Responses.Response): string[] {
+  private parseResponse(response: OpenAI.Chat.ChatCompletion): string[] {
     try {
-      const output = (response as any)['output'];
-
-      if (!output || !Array.isArray(output)) {
-        console.error('❌ Invalid output format - expected array');
-        throw new Error('Invalid response format from AI model');
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        console.error('❌ No content in response');
+        throw new Error('No content in response from AI model');
       }
-
-      const textOutputs = output.map((o: any) => o['content'][0]['text']);
-      return textOutputs;
+      return [content];
     } catch (error) {
       console.error('❌ Error parsing AI response:', error);
       throw new Error(
