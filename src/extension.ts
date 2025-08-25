@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { newPromptForResume, enhancedPromptForResume } from './snapflow/resume';
+import { enhancedPromptForResume } from './snapflow/resume';
 import { saveSession } from './snapflow/save';
 import {
   TimerService,
@@ -24,12 +24,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize configuration service and set up workspace
   configService = new ConfigService(workspacePath);
 
+  let model: string | undefined;
+  let provider: string | undefined;
   try {
     await configService.ensureWorkspaceSetup();
     const apiKey = configService.loadApiKey();
-    if (!apiKey) {
-      console.warn('⚠️ No API key found in .snapflow/api_key');
-    }
+    model = configService._config?.model;
+    provider = configService._config?.provider;
   } catch (error) {
     console.error('❌ Failed to initialize workspace configuration:', error);
   }
@@ -76,7 +77,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let command = 'snapflow-ui.start-stop';
   context.subscriptions.push(
     vscode.commands.registerCommand(command, async () => {
-      toggleStopwatch(workspacePath);
+      toggleStopwatch(workspacePath, provider, model);
     })
   );
 
@@ -143,15 +144,23 @@ export async function activate(context: vscode.ExtensionContext) {
   updateStatusBarItem();
 }
 
-function toggleStopwatch(cwd: string) {
+function toggleStopwatch(
+  cwd: string,
+  provider: string | undefined,
+  model: string | undefined
+) {
   if (timerService.isActive()) {
     stopStopwatch(cwd);
   } else {
-    startStopwatch(cwd);
+    startStopwatch(cwd, provider, model);
   }
 }
 
-async function startStopwatch(cwd: string) {
+async function startStopwatch(
+  cwd: string,
+  provider: string | undefined,
+  model: string | undefined
+) {
   if (timerService.isActive()) {
     // Timer is already running, stop it
     await stopStopwatch(cwd);
@@ -161,11 +170,9 @@ async function startStopwatch(cwd: string) {
   // Start the timer
   timerService.start();
 
-  // Change tracking is always active (no session management needed)
-
   // Get resume and populate output panel
   try {
-    const summary = await enhancedPromptForResume(cwd);
+    const summary = await enhancedPromptForResume(cwd, provider, model);
 
     // Keep existing output channel functionality
     outputChannel.appendLine('');
@@ -253,13 +260,12 @@ async function showStatus(): Promise<void> {
     message += '⚠️ **API Key**: Not configured\n';
     message += '⚠️ **Workspace**: Set up\n';
     message += '❌ **Not ready**\n\n';
-    message += 'Please configure your OpenAI API key to get started.';
+    message += 'Please configure your API key in config.json to get started.';
   }
 
   const action = hasApiKey ? 'OK' : 'Setup API Key';
 
   const selection = await vscode.window.showInformationMessage(message, action);
-
   if (selection === 'Setup API Key') {
     await setupApiKey();
   }
@@ -271,26 +277,8 @@ async function showStatus(): Promise<void> {
 async function setupApiKey(): Promise<void> {
   try {
     // Prompt user for API key
-    const apiKey = await vscode.window.showInputBox({
-      prompt: 'Enter your OpenAI API key',
-      password: true,
-      placeHolder: 'sk-...',
-      validateInput: value => {
-        if (!value || value.trim().length === 0) {
-          return 'API key cannot be empty';
-        }
-        if (!value.startsWith('sk-')) {
-          return 'API key should start with "sk-"';
-        }
-        return null;
-      },
-    });
-
-    if (apiKey) {
-      // Save the API key
-      await configService.saveApiKey(apiKey);
-
-      // Show success message
+    await configService.refreshApiKey();
+    if (configService.hasValidApiKey()) {
       vscode.window.showInformationMessage(
         '✅ API key configured successfully!'
       );
@@ -323,7 +311,7 @@ function updateStatusBarItem(): void {
   } else {
     // No API key configured
     myStatusBarItem.text = '⚠️ SnapFlow';
-    myStatusBarItem.tooltip = 'Click to setup API key';
+    myStatusBarItem.tooltip = 'Configure your API Key in config.json';
     myStatusBarItem.command = 'snapflow.setup';
   }
 

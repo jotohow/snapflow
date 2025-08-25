@@ -58,41 +58,59 @@ OUTPUT FORMAT
 Now process these logs:
 `;
 
+const ENV_KEY_VALS: { [key: string]: string } = {
+  openai: 'OPENAI_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+};
+
+interface Config {
+  provider: string;
+  model: string;
+  providers: {
+    [key: string]: {
+      apiKey: string;
+      baseUrl: string;
+    };
+  };
+}
+
 export class ConfigService {
+  _config: Config | undefined;
+
   constructor(private cwd: string) {}
 
-  /**
-   * Load API key from file and set environment variable
-   */
   loadApiKey(): string | undefined {
-    const apiKeyPath = this.getApiKeyPath();
+    let config = this.loadConfig();
 
-    try {
-      if (fs.existsSync(apiKeyPath)) {
-        const content = fs.readFileSync(apiKeyPath, 'utf-8');
-        const match = content.match(/OPENAI_API_KEY=([^\s]+)/);
+    Object.keys(config?.providers || {}).forEach(provider => {
+      let apiKey = config?.providers[provider].apiKey;
+      let apiKeyValName = ENV_KEY_VALS[provider];
 
-        if (match) {
-          const apiKey = match[1];
-          // Set it in the environment
-          process.env.OPENAI_API_KEY = apiKey;
-          return apiKey;
-        }
+      if (apiKey) {
+        process.env[apiKeyValName] = apiKey;
       }
-    } catch (error) {
-      console.error('❌ Failed to load API key:', error);
-    }
+    });
 
     return undefined;
+  }
+
+  loadConfig(): Config | undefined {
+    const configPath = this.getConfigPath();
+    const content = fs.readFileSync(configPath, 'utf-8');
+    const data = JSON.parse(content);
+    this._config = data;
+
+    return this._config;
   }
 
   /**
    * Refresh API key from file (useful for dynamic reload)
    */
-  refreshApiKey(): string | undefined {
+  refreshApiKey(): null {
     // Clear existing environment variable
     delete process.env.OPENAI_API_KEY;
-    return this.loadApiKey();
+    this.loadApiKey();
+    return null;
   }
 
   /**
@@ -119,10 +137,21 @@ export class ConfigService {
         fs.writeFileSync(logPath, '', 'utf-8');
       }
 
-      // Create api_key file if it doesn't exist
-      const apiKeyPath = this.getApiKeyPath();
-      if (!fs.existsSync(apiKeyPath)) {
-        fs.writeFileSync(apiKeyPath, '', 'utf-8');
+      const defaultConfig = `
+{
+  "provider": "openai",
+  "model": "gpt-4.1-mini",
+  "providers": {
+    "openai": {
+      "apiKey": "",
+      "baseUrl": "https://api.openai.com/v1"
+    }
+  }
+}
+`;
+      const configPath = this.getConfigPath();
+      if (!fs.existsSync(configPath)) {
+        fs.writeFileSync(configPath, defaultConfig, 'utf-8');
       }
     } catch (error) {
       console.error('❌ Failed to set up workspace:', error);
@@ -138,7 +167,7 @@ export class ConfigService {
       this.getSnapflowDir(),
       this.getPromptPath(),
       this.getSnaplogPath(),
-      this.getApiKeyPath(),
+      this.getConfigPath(),
     ];
 
     return requiredPaths.every(path => fs.existsSync(path));
@@ -201,6 +230,10 @@ export class ConfigService {
     return path.join(this.getSnapflowDir(), 'snaplog.jsonl');
   }
 
+  getConfigPath(): string {
+    return path.join(this.getSnapflowDir(), 'config.json');
+  }
+
   /**
    * Validate configuration and return detailed results
    */
@@ -226,15 +259,10 @@ export class ConfigService {
       warnings.push('prompt.txt does not exist (default will be created)');
     }
 
-    const apiKeyPath = this.getApiKeyPath();
-    if (!fs.existsSync(apiKeyPath)) {
-      warnings.push('api_key file does not exist (will be created)');
-    } else {
-      // Check if API key is actually configured
-      const apiKey = this.loadApiKey();
-      if (!apiKey) {
-        issues.push('API key file exists but no valid OPENAI_API_KEY found');
-      }
+    // Check if API key is actually configured
+    const apiKeyLoaded = this.hasValidApiKey();
+    if (!apiKeyLoaded) {
+      issues.push('API key file exists but no valid OPENAI_API_KEY found');
     }
 
     const logPath = this.getSnaplogPath();
@@ -250,28 +278,18 @@ export class ConfigService {
   }
 
   /**
-   * Save API key to file
-   */
-  async saveApiKey(apiKey: string): Promise<void> {
-    try {
-      const apiKeyPath = this.getApiKeyPath();
-      const content = `OPENAI_API_KEY=${apiKey}`;
-      fs.writeFileSync(apiKeyPath, content, 'utf-8');
-
-      // Reload the API key immediately
-      this.refreshApiKey();
-    } catch (error) {
-      console.error('❌ Failed to save API key:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Check if API key is configured and valid
    */
   hasValidApiKey(): boolean {
-    const apiKey = this.loadApiKey();
-    return !!apiKey && apiKey.length > 0;
+    let config = this.loadConfig();
+
+    let keys = Object.keys(config?.providers || {}).map(provider => {
+      // Check that the API key for that provider is defined in env
+      let apiKeyValName = ENV_KEY_VALS[provider];
+      return process.env[apiKeyValName];
+    });
+
+    return keys.every(key => !!key);
   }
 
   /**

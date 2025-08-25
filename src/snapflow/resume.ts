@@ -3,6 +3,7 @@ import {
   ConfigService,
   AIProvider,
   OpenAIProvider,
+  anthropicProvider,
   SimpleChangeTracker,
 } from '../services';
 
@@ -38,40 +39,21 @@ interface ChatMessage {
 }
 
 /**
- * Generate a resume using AI based on recent session data
- */
-async function newPromptForResume(
-  cwd: string = '',
-  model: string = 'gpt-4.1-mini'
-): Promise<string> {
-  try {
-    const configService = new ConfigService(cwd);
-    const aiProvider: AIProvider = new OpenAIProvider();
-
-    const resumePrompt: string = configService.getSystemPrompt();
-    const snaplogPath = configService.getSnaplogPath();
-    const entries = await readLastNJsonl(snaplogPath, 5);
-
-    const prompt = resumePrompt + '\n\n' + JSON.stringify(entries);
-    const response = await aiProvider.generateResume(prompt, model);
-
-    return response;
-  } catch (error) {
-    console.error('❌ Error in newPromptForResume:', error);
-    throw error;
-  }
-}
-
-/**
  * Generate an enhanced resume using AI based on ChangeTracker data
  */
 async function enhancedPromptForResume(
   cwd: string = '',
-  model: string = 'gpt-4.1-mini'
+  provider: string = 'anthropic',
+  model: string = ''
 ): Promise<string> {
   try {
     const configService = new ConfigService(cwd);
-    const aiProvider: AIProvider = new OpenAIProvider();
+    let aiProvider: AIProvider;
+    if (provider == 'anthropic') {
+      aiProvider = new anthropicProvider();
+    } else {
+      aiProvider = new OpenAIProvider();
+    }
 
     //Get the last 100 ChangeSummaries from SimpleChangeTracker
     const simpleChangeTracker = new SimpleChangeTracker(cwd);
@@ -199,7 +181,6 @@ Return ONLY valid JSON, no additional text or formatting.`;
 }
 
 export {
-  newPromptForResume,
   enhancedPromptForResume,
   type SessionEntry,
   type ResumeResponse,

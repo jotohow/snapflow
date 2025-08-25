@@ -24,7 +24,7 @@
         {
           "id": "snapflow",
           "title": "SnapFlow",
-          "icon": "resources/snapflow.svg"
+          "icon": "resources/snapflow.png"
         }
       ]
     },
@@ -67,6 +67,7 @@
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
     "@vscode/codicons": "^0.0.39",
     "dotenv": "^17.2.1",
     "minimatch": "^10.0.3",
