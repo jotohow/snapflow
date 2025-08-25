@@ -27,9 +27,6 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     await configService.ensureWorkspaceSetup();
     const apiKey = configService.loadApiKey();
-    if (!apiKey) {
-      console.warn('⚠️ No API key found in .snapflow/api_key');
-    }
   } catch (error) {
     console.error('❌ Failed to initialize workspace configuration:', error);
   }
@@ -253,13 +250,12 @@ async function showStatus(): Promise<void> {
     message += '⚠️ **API Key**: Not configured\n';
     message += '⚠️ **Workspace**: Set up\n';
     message += '❌ **Not ready**\n\n';
-    message += 'Please configure your OpenAI API key to get started.';
+    message += 'Please configure your API key in config.json to get started.';
   }
 
   const action = hasApiKey ? 'OK' : 'Setup API Key';
 
   const selection = await vscode.window.showInformationMessage(message, action);
-
   if (selection === 'Setup API Key') {
     await setupApiKey();
   }
@@ -271,26 +267,8 @@ async function showStatus(): Promise<void> {
 async function setupApiKey(): Promise<void> {
   try {
     // Prompt user for API key
-    const apiKey = await vscode.window.showInputBox({
-      prompt: 'Enter your OpenAI API key',
-      password: true,
-      placeHolder: 'sk-...',
-      validateInput: value => {
-        if (!value || value.trim().length === 0) {
-          return 'API key cannot be empty';
-        }
-        if (!value.startsWith('sk-')) {
-          return 'API key should start with "sk-"';
-        }
-        return null;
-      },
-    });
-
-    if (apiKey) {
-      // Save the API key
-      await configService.saveApiKey(apiKey);
-
-      // Show success message
+    await configService.refreshApiKey();
+    if (configService.hasValidApiKey()) {
       vscode.window.showInformationMessage(
         '✅ API key configured successfully!'
       );
@@ -323,7 +301,7 @@ function updateStatusBarItem(): void {
   } else {
     // No API key configured
     myStatusBarItem.text = '⚠️ SnapFlow';
-    myStatusBarItem.tooltip = 'Click to setup API key';
+    myStatusBarItem.tooltip = 'Configure your API Key in config.json';
     myStatusBarItem.command = 'snapflow.setup';
   }
 
