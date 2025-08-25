@@ -2,7 +2,7 @@
   "name": "snapflow",
   "displayName": "snapflow",
   "description": "A VS Code extension that helps you maintain context across coding sessions by automatically generating resumes of your recent work and saving session context.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "jotohow",
   "repository": {
     "type": "git",
